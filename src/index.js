@@ -1,5 +1,5 @@
 import { config } from 'dotenv';
-import { initDatabaseConnection } from './db/initMongoConnection.js';
+import { initDatabaseConnection } from './initMongoConnection.js';
 import { setupServer } from './server.js';
 
 config();
