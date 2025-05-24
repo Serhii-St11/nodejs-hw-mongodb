@@ -8,13 +8,14 @@ import {
 import createError from 'http-errors';
 
 export const handleGetAllContacts = async (req, res) => {
-  const contacts = await getAllContacts();
+  const paginationData = await getAllContacts(req.query);
   res.json({
     status: 200,
     message: 'Successfully found contacts!',
-    data: contacts,
+    data: paginationData,
   });
 };
+
 
 export const handleGetContactById = async (req, res) => {
   const { contactId } = req.params;
