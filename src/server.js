@@ -1,8 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import pino from 'pino-http';
+import authRouter from './routers/auth.js';
 import contactsRouter from './routers/contacts.js';
-
 import { errorHandler } from './middlewares/errorHandler.js';
 import { notFoundHandler } from './middlewares/notFoundHandler.js';
 
@@ -13,7 +13,9 @@ export const setupServer = () => {
   app.use(pino());
   app.use(express.json());
 
-  app.use('/contacts', contactsRouter);
+  app.use('/auth', authRouter);
+
+  app.use('/api/contacts', contactsRouter);
 
   app.use(notFoundHandler);
 
@@ -24,6 +26,7 @@ export const setupServer = () => {
     console.log(`Server is running on port ${PORT}`);
   });
 };
+
 
 
 
