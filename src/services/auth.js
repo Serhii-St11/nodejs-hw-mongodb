@@ -1,9 +1,8 @@
 import bcrypt from 'bcryptjs';
 import createHttpError from 'http-errors';
-import  User  from '../models/user.js';
+import User from '../models/user.js';
 import jwt from 'jsonwebtoken';
 import Session from '../models/session.js';
-
 
 const { ACCESS_SECRET, REFRESH_SECRET } = process.env;
 
@@ -41,7 +40,7 @@ export const login = async ({ email, password }) => {
 
   await Session.findOneAndDelete({ userId: user._id });
 
-  const accessTokenValidUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 хв
+  const accessTokenValidUntil = new Date(Date.now() + 15 * 60 * 1000);
   const refreshTokenValidUntil = new Date(
     Date.now() + 30 * 24 * 60 * 60 * 1000,
   );
@@ -63,12 +62,14 @@ export const login = async ({ email, password }) => {
   });
 
   return {
+    user: {
+      email: user.email,
+    },
     accessToken,
     refreshToken,
     sessionId: session._id,
   };
 };
-
 
 export const refresh = async (req, res) => {
   const { refreshToken } = req.cookies;
@@ -97,9 +98,6 @@ export const refresh = async (req, res) => {
     });
   }
 };
-
-
-
 
 export const refreshSession = async (refreshToken) => {
   if (!refreshToken) {
@@ -147,10 +145,8 @@ export const refreshSession = async (refreshToken) => {
     refreshTokenValidUntil,
   });
 
-
   return { accessToken: newAccessToken, refreshToken: newRefreshToken };
 };
-
 
 export const logout = async (refreshToken) => {
   if (!refreshToken) {
@@ -165,4 +161,3 @@ export const logout = async (refreshToken) => {
 
   await Session.deleteOne({ _id: session._id });
 };
-

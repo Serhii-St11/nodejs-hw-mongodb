@@ -51,6 +51,6 @@ export const handleDeleteContact = async (req, res) => {
   const { contactId } = req.params;
   const contact = await deleteContactById(contactId, req.user._id);
   if (!contact) throw createError(404, 'Contact not found');
-  res.status(204).send();
+  res.status(204).json({ message: 'Contact successfully deleted' });
 };
 
