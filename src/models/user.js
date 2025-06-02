@@ -16,6 +16,7 @@ const userSchema = new Schema(
       type: String,
       required: true,
     },
+    subscription: { type: String, default: 'free' },
   },
   {
     timestamps: true,
