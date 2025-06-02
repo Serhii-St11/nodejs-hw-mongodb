@@ -2,13 +2,34 @@ import * as authService from '../services/auth.js';
 
 export const register = async (req, res, next) => {
   try {
-    const newUser = await authService.register(req.body);
+    const { user, accessToken, refreshToken, sessionId } =
+      await authService.register(req.body);
 
-    res.status(201).json({
-      status: 201,
-      message: 'Successfully registered a user!',
-      data: newUser,
-    });
+    res
+      .cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'none',
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+      })
+      .cookie('sessionId', sessionId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'none',
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+      })
+      .status(201)
+      .json({
+        status: 201,
+        message: 'Successfully registered a user!',
+        data: {
+          accessToken,
+          user: {
+            email: user.email,
+            subscription: user.subscription,
+          },
+        },
+      });
   } catch (error) {
     next(error);
   }
@@ -22,23 +43,26 @@ export const login = async (req, res, next) => {
     res
       .cookie('refreshToken', refreshToken, {
         httpOnly: true,
-        secure: true,
+        secure: process.env.NODE_ENV === 'production',
         sameSite: 'none',
         maxAge: 30 * 24 * 60 * 60 * 1000,
       })
       .cookie('sessionId', sessionId, {
         httpOnly: true,
-        secure: true,
+        secure: process.env.NODE_ENV === 'production',
         sameSite: 'none',
         maxAge: 30 * 24 * 60 * 60 * 1000,
       })
       .status(200)
       .json({
         status: 200,
-        accessToken,
-        user: {
-          email: user.email,
-          subscription: user.subscription,
+        message: 'Successfully logged in!',
+        data: {
+          accessToken,
+          user: {
+            email: user.email,
+            subscription: user.subscription,
+          },
         },
       });
   } catch (error) {
@@ -50,13 +74,31 @@ export const refreshSession = async (req, res, next) => {
   try {
     const { refreshToken } = req.cookies;
 
-    const { accessToken } = await authService.refreshSession(refreshToken);
+    const {
+      accessToken,
+      refreshToken: newRefreshToken,
+      sessionId,
+    } = await authService.refreshSession(refreshToken);
 
-    res.status(200).json({
-      status: 200,
-      message: 'Successfully refreshed a session!',
-      data: { accessToken },
-    });
+    res
+      .cookie('refreshToken', newRefreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'none',
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+      })
+      .cookie('sessionId', sessionId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'none',
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+      })
+      .status(200)
+      .json({
+        status: 200,
+        message: 'Successfully refreshed a session!',
+        data: { accessToken },
+      });
   } catch (error) {
     next(error);
   }
@@ -64,9 +106,9 @@ export const refreshSession = async (req, res, next) => {
 
 export const logout = async (req, res, next) => {
   try {
-    const { refreshToken, sessionId } = req.cookies;
+    const { refreshToken } = req.cookies;
 
-    await authService.logout(refreshToken, sessionId);
+    await authService.logout(refreshToken);
 
     res.clearCookie('refreshToken');
     res.clearCookie('sessionId');

@@ -6,6 +6,12 @@ import Session from '../models/session.js';
 
 const { ACCESS_SECRET, REFRESH_SECRET } = process.env;
 
+if (!ACCESS_SECRET || !REFRESH_SECRET) {
+  throw new Error(
+    'The environment variables ACCESS_SECRET and REFRESH_SECRET must be defined',
+  );
+}
+
 export const register = async ({ name, email, password }) => {
   const existingUser = await User.findOne({ email });
 
@@ -19,11 +25,41 @@ export const register = async ({ name, email, password }) => {
     name,
     email,
     password: hashedPassword,
+    subscription: 'free',
+  });
+
+  const accessTokenValidUntil = new Date(Date.now() + 15 * 60 * 1000);
+  const refreshTokenValidUntil = new Date(
+    Date.now() + 30 * 24 * 60 * 60 * 1000,
+  );
+
+  const accessToken = jwt.sign({ userId: newUser._id }, ACCESS_SECRET, {
+    expiresIn: '15m',
+  });
+
+  const refreshToken = jwt.sign({ userId: newUser._id }, REFRESH_SECRET, {
+    expiresIn: '30d',
+  });
+
+  const session = await Session.create({
+    userId: newUser._id,
+    accessToken,
+    refreshToken,
+    accessTokenValidUntil,
+    refreshTokenValidUntil,
   });
 
   const { password: _, ...userData } = newUser.toObject();
 
-  return userData;
+  return {
+    user: {
+      ...userData,
+      subscription: userData.subscription || 'free',
+    },
+    accessToken,
+    refreshToken,
+    sessionId: session._id,
+  };
 };
 
 export const login = async ({ email, password }) => {
@@ -64,6 +100,7 @@ export const login = async ({ email, password }) => {
   return {
     user: {
       email: user.email,
+      subscription: user.subscription || 'free',
     },
     accessToken,
     refreshToken,
@@ -71,51 +108,24 @@ export const login = async ({ email, password }) => {
   };
 };
 
-export const refresh = async (req, res) => {
-  const { refreshToken } = req.cookies;
-
-  try {
-    const { accessToken, refreshToken: newRefreshToken } = await refreshSession(
-      refreshToken,
-    );
-
-    res.cookie('refreshToken', newRefreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 30 * 24 * 60 * 60 * 1000,
-    });
-
-    res.json({
-      status: 'success',
-      message: 'Token refreshed',
-      data: { accessToken },
-    });
-  } catch (error) {
-    res.status(error.status || 500).json({
-      status: 'error',
-      message: error.message,
-    });
-  }
-};
-
 export const refreshSession = async (refreshToken) => {
   if (!refreshToken) {
-    throw createHttpError(401, 'Refresh token is missing');
+    throw createHttpError(401, 'Refresh token missing');
   }
 
-  let payload;
-
   try {
-    payload = jwt.verify(refreshToken, REFRESH_SECRET);
+    jwt.verify(refreshToken, REFRESH_SECRET);
   } catch {
     throw createHttpError(401, 'Invalid or expired refresh token');
   }
 
   const existingSession = await Session.findOne({ refreshToken });
-
   if (!existingSession) {
     throw createHttpError(401, 'Session not found');
+  }
+
+  if (new Date() > existingSession.refreshTokenValidUntil) {
+    throw createHttpError(401, 'Refresh token expired');
   }
 
   const user = await User.findById(existingSession.userId);
@@ -125,10 +135,10 @@ export const refreshSession = async (refreshToken) => {
 
   await Session.deleteOne({ _id: existingSession._id });
 
-  const newAccessToken = jwt.sign({ id: user._id }, ACCESS_SECRET, {
+  const newAccessToken = jwt.sign({ userId: user._id }, ACCESS_SECRET, {
     expiresIn: '15m',
   });
-  const newRefreshToken = jwt.sign({ id: user._id }, REFRESH_SECRET, {
+  const newRefreshToken = jwt.sign({ userId: user._id }, REFRESH_SECRET, {
     expiresIn: '30d',
   });
 
@@ -137,7 +147,7 @@ export const refreshSession = async (refreshToken) => {
     Date.now() + 30 * 24 * 60 * 60 * 1000,
   );
 
-  await Session.create({
+  const newSession = await Session.create({
     userId: user._id,
     accessToken: newAccessToken,
     refreshToken: newRefreshToken,
@@ -145,18 +155,25 @@ export const refreshSession = async (refreshToken) => {
     refreshTokenValidUntil,
   });
 
-  return { accessToken: newAccessToken, refreshToken: newRefreshToken };
+  return {
+    accessToken: newAccessToken,
+    refreshToken: newRefreshToken,
+    sessionId: newSession._id,
+  };
 };
 
 export const logout = async (refreshToken) => {
   if (!refreshToken) {
-    throw createHttpError(401, 'Refresh token is missing');
+    throw createHttpError(401, 'Refresh token missing');
   }
 
   const session = await Session.findOne({ refreshToken });
-
   if (!session) {
     throw createHttpError(401, 'Session not found');
+  }
+
+  if (new Date() > session.refreshTokenValidUntil) {
+    throw createHttpError(401, 'Refresh token expired');
   }
 
   await Session.deleteOne({ _id: session._id });
