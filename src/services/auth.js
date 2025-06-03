@@ -25,7 +25,6 @@ export const register = async ({ name, email, password }) => {
     name,
     email,
     password: hashedPassword,
-    subscription: 'free',
   });
 
   const accessTokenValidUntil = new Date(Date.now() + 15 * 60 * 1000);
@@ -49,13 +48,7 @@ export const register = async ({ name, email, password }) => {
     refreshTokenValidUntil,
   });
 
-  const { password: _, ...userData } = newUser.toObject();
-
   return {
-    user: {
-      ...userData,
-      subscription: userData.subscription || 'free',
-    },
     accessToken,
     refreshToken,
     sessionId: session._id,
@@ -98,10 +91,6 @@ export const login = async ({ email, password }) => {
   });
 
   return {
-    user: {
-      email: user.email,
-      subscription: user.subscription || 'free',
-    },
     accessToken,
     refreshToken,
     sessionId: session._id,
@@ -161,6 +150,7 @@ export const refreshSession = async (refreshToken) => {
     sessionId: newSession._id,
   };
 };
+
 
 export const logout = async (refreshToken) => {
   if (!refreshToken) {

@@ -2,7 +2,7 @@ import * as authService from '../services/auth.js';
 
 export const register = async (req, res, next) => {
   try {
-    const { user, accessToken, refreshToken, sessionId } =
+    const { accessToken, refreshToken, sessionId } =
       await authService.register(req.body);
 
     res
@@ -24,10 +24,6 @@ export const register = async (req, res, next) => {
         message: 'Successfully registered a user!',
         data: {
           accessToken,
-          user: {
-            email: user.email,
-            subscription: user.subscription,
-          },
         },
       });
   } catch (error) {
@@ -37,7 +33,7 @@ export const register = async (req, res, next) => {
 
 export const login = async (req, res, next) => {
   try {
-    const { user, accessToken, refreshToken, sessionId } =
+    const {accessToken, refreshToken, sessionId } =
       await authService.login(req.body);
 
     res
@@ -59,10 +55,6 @@ export const login = async (req, res, next) => {
         message: 'Successfully logged in!',
         data: {
           accessToken,
-          user: {
-            email: user.email,
-            subscription: user.subscription,
-          },
         },
       });
   } catch (error) {
