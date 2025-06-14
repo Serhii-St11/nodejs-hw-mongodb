@@ -1,14 +1,16 @@
 import bcrypt from 'bcryptjs';
 import createHttpError from 'http-errors';
-import User from '../models/user.js';
 import jwt from 'jsonwebtoken';
+
+import User from '../models/user.js';
 import Session from '../models/session.js';
+import sendEmail from '../helpers/sendEmail.js';
 
-const { ACCESS_SECRET, REFRESH_SECRET } = process.env;
+const { ACCESS_SECRET, REFRESH_SECRET, JWT_SECRET, APP_DOMAIN } = process.env;
 
-if (!ACCESS_SECRET || !REFRESH_SECRET) {
+if (!ACCESS_SECRET || !REFRESH_SECRET || !JWT_SECRET || !APP_DOMAIN) {
   throw new Error(
-    'The environment variables ACCESS_SECRET and REFRESH_SECRET must be defined',
+    'The environment variables ACCESS_SECRET, REFRESH_SECRET, JWT_SECRET, and APP_DOMAIN must be defined',
   );
 }
 
@@ -127,6 +129,7 @@ export const refreshSession = async (refreshToken) => {
   const newAccessToken = jwt.sign({ userId: user._id }, ACCESS_SECRET, {
     expiresIn: '15m',
   });
+
   const newRefreshToken = jwt.sign({ userId: user._id }, REFRESH_SECRET, {
     expiresIn: '30d',
   });
@@ -151,7 +154,6 @@ export const refreshSession = async (refreshToken) => {
   };
 };
 
-
 export const logout = async (refreshToken) => {
   if (!refreshToken) {
     throw createHttpError(401, 'Refresh token missing');
@@ -167,4 +169,57 @@ export const logout = async (refreshToken) => {
   }
 
   await Session.deleteOne({ _id: session._id });
+};
+
+export const requestPasswordReset = async (email) => {
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    throw createHttpError(404, 'User not found');
+  }
+
+  const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: '5m' });
+
+  const resetLink = `${APP_DOMAIN}/reset-password?token=${token}`;
+
+  const subject = 'Password Reset';
+  const html = `
+    <p>Hello,</p>
+    <p>You requested a password reset. Click the link below to reset your password:</p>
+    <a href="${resetLink}">${resetLink}</a>
+    <p>If you did not request this, please ignore this email.</p>
+  `;
+
+  const emailSent = await sendEmail({ to: email, subject, html });
+
+  if (!emailSent) {
+    throw createHttpError(500, 'Failed to send reset email');
+  }
+
+  return true;
+};
+
+
+export const resetPassword = async (token, newPassword) => {
+  try {
+    const { email } = jwt.verify(token, JWT_SECRET);
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw createHttpError(404, 'User not found');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await User.findByIdAndUpdate(user._id, { password: hashedPassword });
+
+    await Session.deleteMany({ userId: user._id });
+
+    return true;
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      throw createHttpError(400, 'Reset token has expired');
+    }
+    throw createHttpError(400, 'Invalid reset token');
+  }
 };
