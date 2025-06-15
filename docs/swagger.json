@@ -1,0 +1,194 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "version": "1.0.0",
+    "title": "Contact Book API",
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    },
+    "description": "API для керування контактами: створення, редагування, видалення та авторизація користувачів."
+  },
+  "servers": [
+    { "url": "http://localhost:3000" },
+    { "url": "https://your-deployed-site-url.com" }
+  ],
+  "tags": [
+    { "name": "Contacts", "description": "Операції з контактами" },
+    { "name": "Auth", "description": "Авторизація та користувачі" }
+  ],
+  "paths": {
+    "/contacts/{contactId}": {
+      "get": {
+        "tags": ["Contacts"],
+        "summary": "Отримати контакт за ID",
+        "operationId": "getContactById",
+        "description": "Отримати один контакт за його унікальним ID",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "contactId",
+            "in": "path",
+            "required": true,
+            "description": "Унікальний ідентифікатор контакту",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Контакт знайдено" },
+          "401": { "description": "Неавторизований доступ" },
+          "404": { "description": "Контакт не знайдено" }
+        }
+      },
+      "patch": {
+        "tags": ["Contacts"],
+        "summary": "Оновити контакт",
+        "operationId": "updateContact",
+        "description": "Оновлює дані існуючого контакту за його ID",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "contactId",
+            "in": "path",
+            "required": true,
+            "description": "Унікальний ідентифікатор контакту",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Contact" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Контакт успішно оновлено" },
+          "400": { "description": "Невірні дані" },
+          "401": { "description": "Неавторизований доступ" },
+          "404": { "description": "Контакт не знайдено" }
+        }
+      },
+      "delete": {
+        "tags": ["Contacts"],
+        "summary": "Видалити контакт",
+        "operationId": "deleteContact",
+        "description": "Видаляє контакт за його унікальним ID",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "contactId",
+            "in": "path",
+            "required": true,
+            "description": "Унікальний ідентифікатор контакту",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Контакт успішно видалено" },
+          "401": { "description": "Неавторизований доступ" },
+          "404": { "description": "Контакт не знайдено" }
+        }
+      }
+    },
+    "/contacts": {
+      "get": {
+        "tags": ["Contacts"],
+        "summary": "Отримати всі контакти",
+        "operationId": "getAllContacts",
+        "description": "Отримати список контактів користувача з можливістю фільтрації, пагінації та сортування",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "minimum": 1 },
+            "description": "Номер сторінки"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 50 },
+            "description": "Кількість контактів на сторінці"
+          },
+          {
+            "name": "favorite",
+            "in": "query",
+            "schema": { "type": "boolean" },
+            "description": "Фільтр за улюбленими"
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "schema": { "type": "string", "enum": ["name", "email", "phone"] },
+            "description": "Поле сортування"
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "schema": { "type": "string", "enum": ["asc", "desc"] },
+            "description": "Порядок сортування"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Успішна відповідь з контактами" },
+          "401": { "description": "Неавторизований доступ" }
+        }
+      },
+      "post": {
+        "tags": ["Contacts"],
+        "summary": "Створити новий контакт",
+        "operationId": "createContact",
+        "description": "Створює новий контакт з переданими даними",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Contact" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Контакт успішно створено",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Contact" }
+              }
+            }
+          },
+          "400": { "description": "Некоректні дані запиту" },
+          "401": { "description": "Неавторизований доступ" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Contact": {
+        "type": "object",
+        "required": ["name", "email", "phone"],
+        "properties": {
+          "_id": { "type": "string", "example": "665a6bb9e9b2e4e99eabcdf1" },
+          "name": { "type": "string", "example": "John Doe" },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "john@example.com"
+          },
+          "phone": { "type": "string", "example": "+380501234567" },
+          "favorite": { "type": "boolean", "example": false },
+          "owner": { "type": "string", "example": "665a6bb9e9b2e4e99eabcde0" }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}
