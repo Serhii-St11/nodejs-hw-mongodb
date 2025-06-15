@@ -1,0 +1,49 @@
+get:
+  tags:
+    - Contacts
+  summary: Отримати всі контакти
+  operationId: getAllContacts
+  description: Отримати список контактів користувача з можливістю фільтрації, пагінації та сортування
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+      description: Номер сторінки (за замовчуванням 1)
+    - name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+      description: Кількість контактів на сторінці (за замовчуванням 10)
+    - name: favorite
+      in: query
+      required: false
+      schema:
+        type: boolean
+      description: Фільтр за улюбленими контактами
+    - name: sortBy
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [name, email, phone]
+      description: Поле сортування
+    - name: sortOrder
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [asc, desc]
+      description: Порядок сортування
+  responses:
+    '200':
+      description: Успішна відповідь з контактами
+    '401':
+      description: Неавторизований доступ

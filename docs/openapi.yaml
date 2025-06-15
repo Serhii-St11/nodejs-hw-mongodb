@@ -1,0 +1,40 @@
+openapi: 3.1.0
+info:
+  version: 1.0.0
+  title: Contact Book API
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  description: |
+    API для керування контактами: створення, редагування, видалення та авторизація користувачів.
+
+tags:
+  - name: Contacts
+    description: Операції з контактами
+  - name: Auth
+    description: Авторизація та користувачі
+
+servers:
+  - url: http://localhost:3000
+  - url: https://your-deployed-site-url.com
+
+paths:
+  /contacts/{contactId}:
+    get:
+      $ref: ../swagger/paths/contacts/{id}/get.yaml
+    patch:
+      $ref: ../swagger/paths/contacts/{id}/patch.yaml
+    delete:
+      $ref: ../swagger/paths/contacts/{id}/delete.yaml
+  /contacts:
+    post:
+      $ref: ../swagger/paths/contacts/post.yaml
+
+components:
+  schemas:
+    Contact:
+      $ref: ../swagger/components/schemas/Contact.yaml
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
