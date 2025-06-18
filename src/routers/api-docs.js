@@ -1,12 +1,10 @@
-import express from 'express';
 import swaggerUi from 'swagger-ui-express';
-import fs from 'fs';
-import path from 'path';
+import YAML from 'yamljs';
+import express from 'express';
 
 const router = express.Router();
 
-const swaggerFilePath = path.resolve('docs', 'swagger.json');
-const swaggerDocument = JSON.parse(fs.readFileSync(swaggerFilePath, 'utf-8'));
+const swaggerDocument = YAML.load('./docs/swagger.yaml');
 
 router.use('/', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
