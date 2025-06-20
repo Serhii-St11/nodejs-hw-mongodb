@@ -8,8 +8,8 @@ info:
     url: http://www.apache.org/licenses/LICENSE-2.0.html
 
 servers:
-  - url: https://nodejs-hw-07-zs16.onrender.com
   - url: http://localhost:3000
+  - url: https://nodejs-hw-07-zs16.onrender.com
 
 tags:
   - name: Contacts
@@ -22,7 +22,7 @@ paths:
         - Contacts
       summary: Get all contacts
       operationId: getContacts
-      description: Retrieve a paginated list of contacts
+      description: Retrieve a paginated list of contacts with optional filter by favourite status
       security:
         - bearerAuth: []
       parameters:
@@ -31,22 +31,22 @@ paths:
           required: false
           schema:
             type: integer
-          description: Page number
+            default: 1
         - name: limit
           in: query
           required: false
           schema:
             type: integer
-          description: Number of items per page
+            default: 10
         - name: isFavourite
           in: query
           required: false
           schema:
             type: boolean
-          description: Filter contacts by favourite status
+            example: true
       responses:
         '200':
-          description: A list of contacts
+          description: A paginated list of contacts
           content:
             application/json:
               schema:
@@ -59,15 +59,30 @@ paths:
                     type: string
                     example: Successfully found contacts!
                   data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Contact'
-                  totalPages:
-                    type: integer
-                    example: 3
-                  currentPage:
-                    type: integer
-                    example: 1
+                    type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Contact'
+                      page:
+                        type: integer
+                        example: 1
+                      perPage:
+                        type: integer
+                        example: 10
+                      totalItems:
+                        type: integer
+                        example: 25
+                      totalPages:
+                        type: integer
+                        example: 3
+                      hasPreviousPage:
+                        type: boolean
+                        example: false
+                      hasNextPage:
+                        type: boolean
+                        example: true
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -94,16 +109,21 @@ paths:
               properties:
                 name:
                   type: string
+                  example: Ivan Test
                 email:
                   type: string
                   format: email
+                  example: test22555prob@gmail.com
                 phoneNumber:
                   type: string
+                  example: +380991234567
                 contactType:
                   type: string
-                  enum: [friend, family, work, other]
+                  enum: [work, home, personal]
+                  example: work
                 isFavourite:
                   type: boolean
+                  example: true
                 photo:
                   type: string
                   format: binary
@@ -124,7 +144,18 @@ paths:
                   data:
                     $ref: '#/components/schemas/Contact'
         '400':
-          $ref: '#/components/responses/BadRequest'
+          description: Invalid input
+          content:
+            application/json:
+              examples:
+                invalidEmail:
+                  value:
+                    status: 400
+                    message: '"email" must be a valid email'
+                invalidContactType:
+                  value:
+                    status: 400
+                    message: '"contactType" must be one of [work, home, personal]'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -140,14 +171,14 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - in: path
-          name: contactId
+        - name: contactId
+          in: path
           required: true
           schema:
             type: string
       responses:
         '200':
-          description: Found contact by ID
+          description: Successfully found contact
           content:
             application/json:
               schema:
@@ -162,13 +193,23 @@ paths:
                   data:
                     $ref: '#/components/schemas/Contact'
         '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
+          description: Invalid input
+          content:
+            application/json:
+              example:
+                status: 400
+                message: Invalid input
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Contact not found
+          content:
+            application/json:
+              example:
+                status: 404
+                message: Contact not found
 
     patch:
       tags:
@@ -179,8 +220,8 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - in: path
-          name: contactId
+        - name: contactId
+          in: path
           required: true
           schema:
             type: string
@@ -200,7 +241,7 @@ paths:
                   type: string
                 contactType:
                   type: string
-                  enum: [friend, family, work, other]
+                  enum: [work, home, personal]
                 isFavourite:
                   type: boolean
                 photo:
@@ -223,13 +264,23 @@ paths:
                   data:
                     $ref: '#/components/schemas/Contact'
         '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
+          description: Invalid input
+          content:
+            application/json:
+              example:
+                status: 400
+                message: '"contactType" must be one of [work, home, personal]'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Contact not found
+          content:
+            application/json:
+              example:
+                status: 404
+                message: Contact not found
 
     delete:
       tags:
@@ -240,20 +291,25 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - in: path
-          name: contactId
+        - name: contactId
+          in: path
           required: true
           schema:
             type: string
       responses:
         '204':
-          description: Contact deleted successfully
-        '404':
-          $ref: '#/components/responses/NotFound'
+          description: Contact deleted successfully (no content)
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Contact not found
+          content:
+            application/json:
+              example:
+                status: 404
+                message: Contact not found
 
 components:
   securitySchemes:
@@ -268,90 +324,51 @@ components:
       properties:
         _id:
           type: string
-          example: "684da4b8efa1b6fa25f0f595"
+          example: 684da4b8efa1b6fa25f0f595
         name:
           type: string
-          example: "Hello"
+          example: Hello
         email:
           type: string
-          example: "john.doe@example.com"
+          example: john.doe@example.com
         phoneNumber:
           type: string
-          example: "+380632715337"
+          example: +380632715337
         contactType:
           type: string
-          example: "friend"
+          enum: [work, home, personal]
+          example: work
         isFavourite:
           type: boolean
           example: false
         userId:
           type: string
-          example: "684b16eba2ff42270a5d06dd"
+          example: 684b16eba2ff42270a5d06dd
         photo:
           type: string
-          example: "https://res.cloudinary.com/.../sample.jpg"
+          example: https://res.cloudinary.com/.../sample.jpg
         createdAt:
           type: string
           format: date-time
-          example: "2025-06-14T16:35:04.026Z"
+          example: 2025-06-14T16:35:04.026Z
         updatedAt:
           type: string
           format: date-time
-          example: "2025-06-14T16:35:04.026Z"
+          example: 2025-06-14T16:35:04.026Z
 
   responses:
-    BadRequest:
-      description: Bad request
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              status:
-                type: integer
-                example: 400
-              message:
-                type: string
-                example: Invalid input
-
     Unauthorized:
       description: Unauthorized
       content:
         application/json:
-          schema:
-            type: object
-            properties:
-              status:
-                type: integer
-                example: 401
-              message:
-                type: string
-                example: Unauthorized
+          example:
+            status: 401
+            message: Unauthorized
 
     Forbidden:
       description: Forbidden
       content:
         application/json:
-          schema:
-            type: object
-            properties:
-              status:
-                type: integer
-                example: 403
-              message:
-                type: string
-                example: Forbidden
-
-    NotFound:
-      description: Resource not found
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              status:
-                type: integer
-                example: 404
-              message:
-                type: string
-                example: Contact not found
+          example:
+            status: 403
+            message: Forbidden
